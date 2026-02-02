@@ -1,3 +1,7 @@
+## 0.1.2
+
+* Fix: update package version.
+
 ## 0.1.1
 
 * Fix: minor improvements and documentation updates.
