@@ -4,10 +4,12 @@ This example demonstrates how to use the `shadow_log` package to log messages at
 
 ## Features Demonstrated
 
-- Configuring `ShadowLog` with custom settings
-- Logging at all available levels: `v()` (verbose), `d()` (debug), `i()` (info), `w()` (warning), `e()` (error), `wtf()` (critical)
-- Using custom tags for log messages
-- Logging exceptions and stack traces
+- Configuring `ShadowLog` with multiple outputs (Logcat + `debugPrint`)
+- Using a named logger: `ShadowLog.logger('Example')`
+- Logging at all available levels: `v/d/i/w/e/wtf`
+- Logging structured `fields`
+- Keeping an in-memory log history (`ShadowLogHistory`) and showing it in-app
+- Installing Flutter error hooks (`ShadowLog.installFlutterErrorHandler`)
 
 ## Running the Example
 
@@ -48,5 +50,6 @@ Logs will appear in the Flutter console output during development.
 The example app features:
 - Initial configuration of `ShadowLog` in `main()`
 - Buttons for each log level
-- Sample error logging with exceptions
+- Sample error logging with exceptions and structured fields
+- A simple in-app log viewer powered by `ShadowLogHistory`
 - Instructions for viewing logs

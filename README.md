@@ -1,80 +1,135 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# shadow_log
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+ShadowLog is a small Flutter logging package designed to replace `print` / `debugPrint` while keeping logs visible in **Android Logcat (ADB)** in **release builds**.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-ShadowLog is a tiny Flutter logging package designed to replace `print` and
-`debugPrint` while ensuring logs still appear in Android Logcat (ADB) in
-release mode. It uses `dart:developer` under the hood so you can keep a
-consistent logging API in all build modes.
+It’s inspired by the ergonomics of packages like `logger`, `logging`, and `talker`, but stays lightweight and Logcat-friendly by default.
 
 ## Features
 
-* Log to Android Logcat (ADB) in debug and release.
-* Simple drop-in API: `ShadowLog.d`, `ShadowLog.i`, `ShadowLog.w`, `ShadowLog.e`.
-* Configurable minimum level, default tag, and release-mode behavior.
+- Logcat-friendly default output (`dart:developer.log`)
+- Familiar API: `ShadowLog.d/i/w/e/wtf` + `ShadowLog.logger('Tag')`
+- Multiple outputs (Logcat + `debugPrint` + custom)
+- Formatters (default is message-only, optional pretty formatter)
+- `onRecord` stream + Talker-style observers
+- Optional in-memory history (`ShadowLogHistory`)
+- Optional Flutter error hooks (`ShadowLog.installFlutterErrorHandler`)
+- Optional guarded-zone helper (`ShadowLog.runZonedGuarded`)
 
-## Getting started
-
-Add the package to your project and import it where you log messages.
-
-## Usage
+## Quick start
 
 ```dart
 import 'package:shadow_log/shadow_log.dart';
 
 void main() {
-	ShadowLog.configure(
-		const ShadowLogConfig(
-			enabled: true,
-			enabledInRelease: true,
-			minLevel: ShadowLogLevel.debug,
-			name: 'MyApp',
-		),
-	);
+  ShadowLog.configure(
+    ShadowLogConfig(
+      name: 'MyApp',
+      minLevel: ShadowLogLevel.debug,
+      formatter: const ShadowPrettyFormatter(),
+      outputs: const <ShadowLogOutput>[
+        ShadowDeveloperLogOutput(), // Android Logcat-friendly
+        ShadowDebugPrintOutput(), // Flutter console
+      ],
+    ),
+  );
 
-	ShadowLog.d('Debug message');
-	ShadowLog.i('Info message');
-	ShadowLog.w('Warning message');
-	ShadowLog.e('Error message', error: Exception('Boom'));
+  // Optional: capture Flutter framework + platform errors.
+  ShadowLog.installFlutterErrorHandler();
+
+  ShadowLog.d('Hello debug');
+  ShadowLog.e('Something failed', error: Exception('Boom'));
 }
 ```
 
-You can also use the top-level helper `slog()` if you want a quick debug log:
+## Named loggers (tags)
 
 ```dart
-slog('Quick debug log');
+final log = ShadowLog.logger('Auth');
+
+log.i('Signed in', fields: {'userId': 123});
+log.w('Token expired');
 ```
 
-### Release behavior
+You can create child loggers too:
 
-`ShadowLog` keeps logging in release builds by default. If you want to disable
-logs in release, set `enabledInRelease: false` in `ShadowLogConfig`.
+```dart
+final apiLog = ShadowLog.logger('Api').child('User');
+apiLog.d('GET /me');
+```
 
-### Filtering in Logcat
+## Structured fields
 
-All logs are sent with a tag. By default it is `ShadowLog`, or you can pass a
-custom `tag` parameter for each call.
+All log methods support `fields`:
 
-### Related packages (alternatives)
+```dart
+ShadowLog.i('Fetched profile', fields: {'userId': 123, 'cached': true});
+```
 
-If you want more features, these popular packages may also fit your needs:
+The default formatter prints `message {k=v, ...}` only when `fields` are provided.
 
-* `logger` – rich formatting and pretty printers.
-* `logging` – Dart’s standard logging package with hierarchical loggers.
-* `talker` – structured logs, error capture, and UI helpers.
+## Listen to logs (`onRecord`)
 
-ShadowLog is intentionally minimal and optimized for Logcat in release.
+```dart
+ShadowLog.onRecord.listen((record) {
+  // Send to analytics, save to file, show in UI, etc.
+  // record.level / record.loggerName / record.time / record.messageText ...
+});
+```
 
-## Additional information
+## In-memory history (Talker-like)
 
-Contributions and issues are welcome. Please include a short repro and the
-expected Logcat output when filing bugs.
+```dart
+final history = ShadowLog.attachHistory(capacity: 200);
+
+// `history` is a ChangeNotifier; you can rebuild widgets when it changes.
+// history.recordsReversed -> newest first
+```
+
+If you prefer explicit config:
+
+```dart
+final history = ShadowLogHistory(capacity: 200);
+ShadowLog.configure(
+  ShadowLog.config.copyWith(observers: <ShadowLogObserver>[history]),
+);
+```
+
+## Custom outputs
+
+You can create your own output:
+
+```dart
+ShadowLog.addOutput(
+  ShadowCallbackOutput((record, message) {
+    // Do something with `record` and the formatted `message`
+  }),
+);
+```
+
+For tests, use `ShadowMemoryOutput`.
+
+## Release behavior
+
+ShadowLog logs in release builds by default. To disable logs in release:
+
+```dart
+ShadowLog.configure(
+  ShadowLog.config.copyWith(enabledInRelease: false),
+);
+```
+
+## Filtering in Logcat
+
+Logs use the logger/tag name as the Logcat tag. Example:
+
+```sh
+adb logcat | grep "MyApp"
+```
+
+## Alternatives
+
+If you need even more features, consider:
+
+- `logger` (pretty printers, filters, outputs)
+- `logging` (hierarchical loggers + standard record model)
+- `talker` (structured logs + observers + UI helpers)

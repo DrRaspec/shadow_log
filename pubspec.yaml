@@ -1,6 +1,6 @@
 name: shadow_log
 description: "Simple Logcat-friendly logging for Flutter, safe to use in release builds."
-version: 0.1.2
+version: 0.2.0
 repository: https://github.com/DrRaspec/shadow_log
 
 environment:

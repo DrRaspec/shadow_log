@@ -2,125 +2,160 @@ import 'package:flutter/material.dart';
 import 'package:shadow_log/shadow_log.dart';
 
 void main() {
-  // Configure ShadowLog
+  // Configure ShadowLog (Logcat + debug console).
   ShadowLog.configure(
     ShadowLogConfig(
-      enabled: true,
-      enabledInRelease: true,
-      minLevel: ShadowLogLevel.debug,
       name: 'ShadowLogExample',
+      minLevel: ShadowLogLevel.verbose,
+      formatter: const ShadowPrettyFormatter(),
+      outputs: const <ShadowLogOutput>[
+        ShadowDeveloperLogOutput(),
+        ShadowDebugPrintOutput(),
+      ],
     ),
   );
 
-  runApp(const ShadowLogExampleApp());
+  // Optional: forward Flutter + platform errors into ShadowLog.
+  ShadowLog.installFlutterErrorHandler();
+
+  // Optional: keep the last N logs in memory (useful for in-app log UIs).
+  final history = ShadowLog.attachHistory(capacity: 200);
+
+  runApp(ShadowLogExampleApp(history: history));
 }
 
 class ShadowLogExampleApp extends StatelessWidget {
-  const ShadowLogExampleApp({Key? key}) : super(key: key);
+  const ShadowLogExampleApp({super.key, required this.history});
+
+  final ShadowLogHistory history;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ShadowLog Example',
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      home: const ShadowLogExamplePage(),
+      home: ShadowLogExamplePage(history: history),
     );
   }
 }
 
 class ShadowLogExamplePage extends StatefulWidget {
-  const ShadowLogExamplePage({Key? key}) : super(key: key);
+  const ShadowLogExamplePage({super.key, required this.history});
+
+  final ShadowLogHistory history;
 
   @override
   State<ShadowLogExamplePage> createState() => _ShadowLogExamplePageState();
 }
 
 class _ShadowLogExamplePageState extends State<ShadowLogExamplePage> {
+  final ShadowLogger _log = ShadowLog.logger('Example');
+
   @override
   void initState() {
     super.initState();
-    // Log initialization
-    ShadowLog.d('App initialized');
+    _log.d('App initialized');
   }
 
   void _logVerbose() {
-    ShadowLog.v('This is a verbose message', tag: 'Example');
+    _log.v('This is a verbose message');
   }
 
   void _logDebug() {
-    ShadowLog.d('This is a debug message', tag: 'Example');
+    _log.d('This is a debug message');
   }
 
   void _logInfo() {
-    ShadowLog.i('This is an info message', tag: 'Example');
+    _log.i('This is an info message');
   }
 
   void _logWarning() {
-    ShadowLog.w('This is a warning message', tag: 'Example');
+    _log.w('This is a warning message');
   }
 
   void _logError() {
-    ShadowLog.e(
+    _log.e(
       'This is an error message',
-      tag: 'Example',
       error: Exception('Sample exception'),
     );
   }
 
   void _logWTF() {
-    ShadowLog.wtf(
+    _log.wtf(
       'Something went really wrong!',
-      tag: 'Example',
       error: Exception('Critical error'),
     );
+  }
+
+  void _logWithFields() {
+    _log.i(
+      'Structured fields demo',
+      fields: <String, Object?>{
+        'userId': 123,
+        'cached': false,
+        'feature': 'shadow_log',
+      },
+    );
+  }
+
+  void _clearHistory() {
+    widget.history.clear();
+    _log.i('History cleared');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ShadowLog Example'), elevation: 0),
-      body: Center(
-        child: SingleChildScrollView(
+      appBar: AppBar(
+        title: const Text('ShadowLog Example'),
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Clear history',
+            onPressed: _clearHistory,
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
                 'Tap buttons to log at different levels.',
                 style: TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _logVerbose,
-                child: const Text('Log Verbose'),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _logVerbose,
+                    child: const Text('Verbose'),
+                  ),
+                  ElevatedButton(onPressed: _logDebug, child: const Text('Debug')),
+                  ElevatedButton(onPressed: _logInfo, child: const Text('Info')),
+                  ElevatedButton(
+                    onPressed: _logWarning,
+                    child: const Text('Warning'),
+                  ),
+                  ElevatedButton(onPressed: _logError, child: const Text('Error')),
+                  ElevatedButton(onPressed: _logWTF, child: const Text('WTF')),
+                  OutlinedButton(
+                    onPressed: _logWithFields,
+                    child: const Text('Fields'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _logDebug,
-                child: const Text('Log Debug'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _logInfo,
-                child: const Text('Log Info'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _logWarning,
-                child: const Text('Log Warning'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: _logError,
-                child: const Text('Log Error'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(onPressed: _logWTF, child: const Text('Log WTF')),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               const Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -131,8 +166,78 @@ class _ShadowLogExamplePageState extends State<ShadowLogExamplePage> {
                       SizedBox(height: 8),
                       Text('• Android: adb logcat | grep "ShadowLogExample"'),
                       SizedBox(height: 8),
-                      Text('• Check app console output for debug builds'),
+                      Text('• Flutter console (debug builds)'),
                     ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'In-app history (newest first)',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: AnimatedBuilder(
+                            animation: widget.history,
+                            builder: (context, _) {
+                              final records = widget.history.recordsReversed;
+                              if (records.isEmpty) {
+                                return const Center(
+                                  child: Text('No logs yet'),
+                                );
+                              }
+
+                              return ListView.separated(
+                                itemCount: records.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final record = records[index];
+                                  final color = switch (record.level) {
+                                    ShadowLogLevel.verbose =>
+                                      Colors.grey.shade600,
+                                    ShadowLogLevel.debug =>
+                                      Colors.blue.shade700,
+                                    ShadowLogLevel.info =>
+                                      Colors.green.shade700,
+                                    ShadowLogLevel.warning =>
+                                      Colors.orange.shade700,
+                                    ShadowLogLevel.error =>
+                                      Colors.red.shade700,
+                                    ShadowLogLevel.wtf =>
+                                      Colors.purple.shade700,
+                                    _ => Colors.black,
+                                  };
+
+                                  final text =
+                                      ShadowLog.config.formatter.format(record);
+
+                                  return Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 6),
+                                    child: Text(
+                                      text,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: color,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
