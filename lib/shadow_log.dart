@@ -1,5 +1,3 @@
-library shadow_log;
-
 export 'src/config.dart';
 export 'src/formatter.dart';
 export 'src/history.dart';

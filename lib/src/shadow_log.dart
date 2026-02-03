@@ -92,6 +92,7 @@ class ShadowLog {
     final previousPlatformOnError = ui.PlatformDispatcher.instance.onError;
 
     FlutterError.onError = (details) {
+      final context = details.context;
       ShadowLog.e(
         details.exceptionAsString(),
         tag: flutterTag,
@@ -99,7 +100,7 @@ class ShadowLog {
         stackTrace: details.stack,
         fields: <String, Object?>{
           'library': details.library,
-          if (details.context != null) 'context': details.context.toDescription(),
+          if (context != null) 'context': context.toDescription(),
         },
       );
 
@@ -132,7 +133,7 @@ class ShadowLog {
   }
 
   /// Runs [body] in a guarded zone and logs uncaught errors.
-  static R runZonedGuarded<R>(
+  static R? runZonedGuarded<R>(
     R Function() body, {
     String tag = 'Zone',
     Object? message = 'Uncaught zone error',

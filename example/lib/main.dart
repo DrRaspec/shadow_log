@@ -197,7 +197,7 @@ class _ShadowLogExamplePageState extends State<ShadowLogExamplePage> {
 
                               return ListView.separated(
                                 itemCount: records.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final record = records[index];

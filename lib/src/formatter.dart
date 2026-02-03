@@ -47,10 +47,10 @@ class ShadowPrettyFormatter implements ShadowLogFormatter {
       parts.add(record.time.toIso8601String());
     }
     if (includeLevel) {
-      parts.add('[${record.level.label}]');
+      parts.add('[$record.level.label]');
     }
     if (includeLoggerName) {
-      parts.add('(${record.loggerName})');
+      parts.add('($record.loggerName)');
     }
 
     parts.add(record.messageText);
